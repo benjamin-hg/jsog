@@ -26,6 +26,7 @@ JSOG.encode = (original, idProperty = '@id', refProperty = '@ref') ->
 	#console.log "encoding #{JSON.stringify(original)}"
 
 	sofar = {}
+	doLater = undefined
 
 	# Get (and if necessary, set) an object id. This ends up being left behind in the original object.
 	idOf = (obj) ->
@@ -40,10 +41,21 @@ JSOG.encode = (original, idProperty = '@id', refProperty = '@ref') ->
 			if sofar[id]
 				return { "#{refProperty}": id}
 
+			populate = (key, value) ->
+				result[key] = doEncode(value)
+
 			result = sofar[id] = { "#{idProperty}": id }
 			for key, value of original
 				if key != JSOG_OBJECT_ID
-					result[key] = doEncode(value)
+					if doLater
+						doLater.push(populate.bind(null, key, value))
+					else
+						doLater = []
+						populate key, value
+						while doLater.length
+							doLater.pop()()
+						doLater = undefined
+					
 
 			return result
 
